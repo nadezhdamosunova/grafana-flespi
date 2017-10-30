@@ -1,0 +1,22 @@
+<query-editor-row query-ctrl="ctrl" class="generic-datasource-query-row" has-text-edit-mode="true">
+  <div class="gf-form-inline">
+    <label class="gf-form-label query-keyword width-9">Container</label>
+    <div class="gf-form">
+      <gf-form-dropdown model="ctrl.target.target"
+        allow-custom="true"
+        lookup-text="true"
+        get-options="ctrl.getContainers($query)"
+        on-change="ctrl.onChangeInternal()">
+      </gf-form-dropdown>
+    </div>
+    <label class="gf-form-label query-keyword width-9">Parameter</label>
+    <div class="gf-form">
+      <gf-form-dropdown model="ctrl.target.parameter"
+                        allow-custom="true"
+                        lookup-text="true"
+                        get-options="ctrl.getParameters($query)"
+                        on-change="ctrl.onChangeInternal()">
+      </gf-form-dropdown>
+    </div>
+  </div>
+</query-editor-row>
