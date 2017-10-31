@@ -154,9 +154,14 @@ System.register(['lodash'], function (_export, _context) {
               }).then(function (response) {
                 var res = [];
                 var data = response.data.result;
-
                 for (var i = 0; i < data.length; i++) {
-                  res.push({ value: data[i].id, text: data[i].id });
+                  var label;
+                  if (data[i].name == undefined || data[i].name == null) {
+                    label = data[i].id;
+                  } else {
+                    label = data[i].name + ' (' + data[i].id + ')';
+                  }
+                  res.push({ value: data[i].id, text: label });
                 }
                 return res;
               });

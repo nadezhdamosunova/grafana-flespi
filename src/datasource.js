@@ -113,9 +113,14 @@ export class FlespiDatasource {
       }).then(response => {
         const res = [];
         const data = response.data.result;
-
-        for (let i = 0; i < data.length; i++) {
-          res.push({value: data[i].id, text: data[i].id});
+        for (var i = 0; i < data.length; i++) {
+          var label;
+          if (data[i].name == undefined || data[i].name == null) {
+            label = data[i].id;
+          } else {
+            label = data[i].name + ' (' + data[i].id + ')';
+          }
+          res.push({value: data[i].id, text: label});
         }
         return res;
       });
