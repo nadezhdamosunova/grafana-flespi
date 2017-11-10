@@ -55,25 +55,24 @@ System.register(['lodash'], function (_export, _context) {
         _createClass(FlespiDatasource, [{
           key: 'query',
           value: function query(options) {
+            console.log("before: " + JSON.stringify(options));
             var query = this.buildQueryParameters(options);
+            console.log("in the middle: " + JSON.stringify(query));
             query.targets = query.targets.filter(function (t) {
               return !t.hide;
             });
+            console.log("after: " + JSON.stringify(query));
 
             if (query.targets == null || query.targets.length <= 0) {
               return this.q.when({ data: [] });
             }
             // prepare params for request
             var container_id = query.targets[0].target;
-            var parameters = query.targets[0].parameter.replace(/[\(\)]/g, '');
-            var params = parameters.split('|');
+            var parameters = query.targets[0].parameter.replace(/[{})]/g, '');
             var from = parseInt(Date.parse(query.range.from) / 1000);
             var to = parseInt(Date.parse(query.range.to) / 1000);
-            var fields = "time";
-            for (var i = 0; i < params.length; i++) {
-              fields = fields + "," + params[i];
-            }
-            var request_params = { max_count: query.maxDataPoints, fields: fields, left_key: from, right_key: to };
+
+            var request_params = { max_count: query.maxDataPoints, fields: parameters, left_key: from, right_key: to };
 
             return this.doRequest({
               url: this.url + '/containers/' + container_id + '/messages?data=' + JSON.stringify(request_params),
@@ -85,6 +84,7 @@ System.register(['lodash'], function (_export, _context) {
               }
               // create object to store response data
               var dict = {};
+              var params = parameters.split(',');
               for (var i = 0; i < params.length; i++) {
                 var target = { target: params[i], datapoints: [] };
                 dict[params[i]] = target;
@@ -94,10 +94,8 @@ System.register(['lodash'], function (_export, _context) {
                 // for each item in `result` array
                 var item_params = response.data.result[i].params;
                 for (var param in item_params) {
-                  // for each param in `params` object, except `time`
-                  if (param == "time") continue;
                   var target = dict[param];
-                  target.datapoints.push([item_params[param], parseInt(item_params.time * 1000)]);
+                  target.datapoints.push([item_params[param], parseInt(response.data.result[i].key * 1000)]);
                 }
               }
               // format object to send query result
@@ -212,7 +210,7 @@ System.register(['lodash'], function (_export, _context) {
                 target: _this.templateSrv.replace(target.target, options.scopedVars, 'regex'),
                 refId: target.refId,
                 hide: target.hide,
-                parameter: _this.templateSrv.replace(target.parameter, options.scopedVars, 'regex')
+                parameter: _this.templateSrv.replace(target.parameter)
               };
             });
 
