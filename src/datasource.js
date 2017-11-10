@@ -24,7 +24,7 @@ export class FlespiDatasource {
     query.targets = query.targets.filter(t => !t.hide);
     console.log("after: " + JSON.stringify(query))
 
-    if (query.targets == null || query.targets.length <= 0) {
+    if (query.targets == null || query.targets.length <= 0 || !query.targets[0].target || !query.targets[0].parameter) {
       return this.q.when({data: []});
     }
     // prepare params for request
