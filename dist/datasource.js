@@ -207,7 +207,7 @@ System.register(['lodash'], function (_export, _context) {
 
             var targets = _.map(options.targets, function (target) {
               return {
-                target: _this.templateSrv.replace(target.target, options.scopedVars, 'regex'),
+                target: typeof target.target == "string" ? _this.templateSrv.replace(target.target, options.scopedVars, 'regex') : target.target,
                 refId: target.refId,
                 hide: target.hide,
                 parameter: _this.templateSrv.replace(target.parameter)

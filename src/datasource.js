@@ -161,7 +161,7 @@ export class FlespiDatasource {
 
     var targets = _.map(options.targets, target => {
       return {
-        target: this.templateSrv.replace(target.target, options.scopedVars, 'regex'),
+        target: typeof target.target == "string" ? this.templateSrv.replace(target.target, options.scopedVars, 'regex') : target.target,
         refId: target.refId,
         hide: target.hide,
         parameter: this.templateSrv.replace(target.parameter)
