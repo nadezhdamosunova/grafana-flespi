@@ -32,8 +32,12 @@ export class FlespiDatasource {
     var parameters = query.targets[0].parameter.replace(/[{})]/g, '');
     var from = parseInt(Date.parse(query.range.from) / 1000);
     var to = parseInt(Date.parse(query.range.to) / 1000);
+    var interval_sec = query.scopedVars.__interval_ms.value / 1000;
 
     var request_params = {max_count: query.maxDataPoints, fields: parameters, left_key: from, right_key : to}
+    if (interval_sec >= 60) {
+        request_params.generalize = interval_sec;
+    }
 
     return this.doRequest({
       url: this.url + '/containers/' + container_id + '/messages?data=' + JSON.stringify(request_params),
