@@ -107,7 +107,9 @@ export class FlespiDatasource {
   }
 
   metricFindQuery(query) {
-    if (query == "containers") {
+  query = this.templateSrv.replace(query, null, 'regex')
+  console.log(query)
+    if (query == "services.*") {
       return this.doRequest({
         url: this.url + '/containers/all',
         method: 'GET',
@@ -117,18 +119,20 @@ export class FlespiDatasource {
         for (var i = 0; i < data.length; i++) {
           var label;
           if (data[i].name == undefined || data[i].name == null) {
-            label = data[i].id;
+            label = data[i].id
           } else {
-            label = data[i].name + ' (' + data[i].id + ')';
+            var svc_name = data[i].name.split('|')
+            label = svc_name[0];
           }
-          res.push({value: data[i].id, text: label});
+          res.push({value: label, text: label})
         }
         return res;
       });
     }
-    if (query == "parameters") {
+    if (query.indexOf(".params.*") !== -1) {
+      var svc_name = query.split('.')[0]
       return this.doRequest({
-        url: this.url + '/containers/all?fields=parameters',
+        url: this.url + '/containers/name=' + svc_name + '|*?fields=parameters',
         method: 'GET',
       }).then(response => {
         const res = [];
@@ -142,8 +146,14 @@ export class FlespiDatasource {
         }
         return res;
       });
-      return { status: "success", message: "Only `containers` and `parameters` queries are supported", title: "Choose query" };
     }
+
+    return this.doRequest({
+           url: this.url + '/containers/all',
+           method: 'GET',
+    }).then(metrics => {
+        return { status: "success", message: "Only `containers` and `parameters` queries are supported", title: "Choose query" };
+    });
   }
 
   doRequest(options) {

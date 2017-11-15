@@ -149,7 +149,9 @@ System.register(['lodash'], function (_export, _context) {
         }, {
           key: 'metricFindQuery',
           value: function metricFindQuery(query) {
-            if (query == "containers") {
+            query = this.templateSrv.replace(query, null, 'regex');
+            console.log(query);
+            if (query == "services.*") {
               return this.doRequest({
                 url: this.url + '/containers/all',
                 method: 'GET'
@@ -161,16 +163,18 @@ System.register(['lodash'], function (_export, _context) {
                   if (data[i].name == undefined || data[i].name == null) {
                     label = data[i].id;
                   } else {
-                    label = data[i].name + ' (' + data[i].id + ')';
+                    var svc_name = data[i].name.split('|');
+                    label = svc_name[0];
                   }
-                  res.push({ value: data[i].id, text: label });
+                  res.push({ value: label, text: label });
                 }
                 return res;
               });
             }
-            if (query == "parameters") {
+            if (query.indexOf(".params.*") !== -1) {
+              var svc_name = query.split('.')[0];
               return this.doRequest({
-                url: this.url + '/containers/all?fields=parameters',
+                url: this.url + '/containers/name=' + svc_name + '|*?fields=parameters',
                 method: 'GET'
               }).then(function (response) {
                 var res = [];
@@ -184,8 +188,14 @@ System.register(['lodash'], function (_export, _context) {
                 }
                 return res;
               });
-              return { status: "success", message: "Only `containers` and `parameters` queries are supported", title: "Choose query" };
             }
+
+            return this.doRequest({
+              url: this.url + '/containers/all',
+              method: 'GET'
+            }).then(function (metrics) {
+              return { status: "success", message: "Only `containers` and `parameters` queries are supported", title: "Choose query" };
+            });
           }
         }, {
           key: 'doRequest',
