@@ -69,6 +69,7 @@ System.register(['lodash'], function (_export, _context) {
                         console.log("after: " + JSON.stringify(query));
 
                         if (query.targets == null || query.targets.length <= 0 || !query.targets[0].target || !query.targets[0].parameter) {
+                            // unknown target - return empty result - no data points
                             return this.q.when({ data: [] });
                         }
                         // prepare params for request
@@ -87,31 +88,33 @@ System.register(['lodash'], function (_export, _context) {
                             url: this.url + '/containers/name=' + svc_name + '|*/messages?data=' + JSON.stringify(request_params),
                             method: 'GET'
                         }).then(function (response) {
+                            // parse response: convert container messages to timeseries
                             var data = [];
                             if (!response.data.result || response.data.result.length == 0) {
+                                // empty response - no data points
                                 return { data: data };
                             }
-                            // create object to store response data
+
                             var dict = {};
-                            var params = parameters.split(',');
-                            for (var i = 0; i < params.length; i++) {
-                                var target = { target: params[i], datapoints: [] };
-                                dict[params[i]] = target;
-                            }
-                            // parse response
                             for (var i = 0; i < response.data.result.length; i++) {
-                                // for each item in `result` array
-                                var item_params = response.data.result[i].params;
-                                for (var param in item_params) {
-                                    var target = dict[param];
-                                    target.datapoints.push([item_params[param], parseInt(response.data.result[i].key * 1000)]);
+                                // for each item in `result` array, i.e. each container message
+                                var params = response.data.result[i].params;
+                                for (var param in params) {
+                                    if (!dict[param]) {
+                                        dict[param] = {
+                                            datapoints: []
+                                        };
+                                    }
+                                    dict[param].datapoints.push([params[param], parseInt(response.data.result[i].key * 1000)]);
                                 }
                             }
-                            // format object to send query result
+                            // format parameters dictionary to timeseries
                             for (var param in dict) {
-                                data.push(dict[param]);
+                                data.push({
+                                    target: param,
+                                    datapoints: dict[param].datapoints
+                                });
                             }
-
                             return { data: data };
                         });
                     }
