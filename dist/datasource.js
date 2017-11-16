@@ -80,8 +80,10 @@ System.register(['lodash'], function (_export, _context) {
                         var interval_sec = query.scopedVars.__interval_ms.value / 1000;
 
                         var request_params = { max_count: query.maxDataPoints, fields: parameters, left_key: from, right_key: to };
-                        if (interval_sec >= 60) {
-                            request_params.generalize = interval_sec;
+                        if (interval_sec !== 0 && query.maxDataPoints > 0 && (to - from) / interval_sec > query.maxDataPoints) {
+                            // generalize parameters
+                            var gen_interval = (to - from) / query.maxDataPoints;
+                            request_params.generalize = gen_interval >= 60 ? parseInt(gen_interval) : 60;
                         }
 
                         return this.doRequest({
@@ -110,6 +112,7 @@ System.register(['lodash'], function (_export, _context) {
                             }
                             // format parameters dictionary to timeseries
                             for (var param in dict) {
+                                console.log("target: " + param + ", datapoints length: " + dict[param].datapoints.length);
                                 data.push({
                                     target: param,
                                     datapoints: dict[param].datapoints

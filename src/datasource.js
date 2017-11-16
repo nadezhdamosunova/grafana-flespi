@@ -22,9 +22,9 @@ constructor(instanceSettings, $q, backendSrv, templateSrv) {
 // -----------------------------------
 query(options) {
     console.log("before: " + JSON.stringify(options))
-    var query = this.buildQueryParameters(options);
+    var query = this.buildQueryParameters(options)
     console.log("in the middle: " + JSON.stringify(query))
-    query.targets = query.targets.filter(t => !t.hide);
+    query.targets = query.targets.filter(t => !t.hide)
     console.log("after: " + JSON.stringify(query))
 
     if (query.targets == null || query.targets.length <= 0 || !query.targets[0].target || !query.targets[0].parameter) {
@@ -32,15 +32,17 @@ query(options) {
         return this.q.when({data: []});
     }
     // prepare params for request
-    var svc_name = query.targets[0].target;
-    var parameters = query.targets[0].parameter.replace(/[{})]/g, '');
-    var from = parseInt(Date.parse(query.range.from) / 1000);
-    var to = parseInt(Date.parse(query.range.to) / 1000);
-    var interval_sec = query.scopedVars.__interval_ms.value / 1000;
+    var svc_name = query.targets[0].target
+    var parameters = query.targets[0].parameter.replace(/[{})]/g, '')
+    var from = parseInt(Date.parse(query.range.from) / 1000)
+    var to = parseInt(Date.parse(query.range.to) / 1000)
+    var interval_sec = query.scopedVars.__interval_ms.value / 1000
 
     var request_params = {max_count: query.maxDataPoints, fields: parameters, left_key: from, right_key : to}
-    if (interval_sec >= 60) {
-        request_params.generalize = interval_sec;
+    if (interval_sec !== 0 && query.maxDataPoints > 0 && ((to - from)/interval_sec > query.maxDataPoints)) {
+        // generalize parameters
+        var gen_interval = (to - from)/query.maxDataPoints
+        request_params.generalize = gen_interval >= 60 ? parseInt(gen_interval) : 60
     }
 
     return this.doRequest({
@@ -69,6 +71,7 @@ query(options) {
         }
         // format parameters dictionary to timeseries
         for (var param in dict) {
+            console.log("target: " + param + ", datapoints length: " + dict[param].datapoints.length)
             data.push({
                 target: param,
                 datapoints: dict[param].datapoints
