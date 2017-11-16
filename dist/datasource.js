@@ -52,6 +52,11 @@ System.register(['lodash'], function (_export, _context) {
           this.templateSrv = templateSrv;
         }
 
+        // -----------------------------------
+        // query metrics values and convert into timeseries
+        // -----------------------------------
+
+
         _createClass(FlespiDatasource, [{
           key: 'query',
           value: function query(options) {
@@ -67,7 +72,7 @@ System.register(['lodash'], function (_export, _context) {
               return this.q.when({ data: [] });
             }
             // prepare params for request
-            var container_id = query.targets[0].target;
+            var svc_name = query.targets[0].target;
             var parameters = query.targets[0].parameter.replace(/[{})]/g, '');
             var from = parseInt(Date.parse(query.range.from) / 1000);
             var to = parseInt(Date.parse(query.range.to) / 1000);
@@ -79,7 +84,7 @@ System.register(['lodash'], function (_export, _context) {
             }
 
             return this.doRequest({
-              url: this.url + '/containers/' + container_id + '/messages?data=' + JSON.stringify(request_params),
+              url: this.url + '/containers/name=' + svc_name + '|*/messages?data=' + JSON.stringify(request_params),
               method: 'GET'
             }).then(function (response) {
               var data = [];
@@ -149,8 +154,11 @@ System.register(['lodash'], function (_export, _context) {
         }, {
           key: 'metricFindQuery',
           value: function metricFindQuery(query) {
-            query = this.templateSrv.replace(query, null, 'regex');
+            query = this.templateSrv.replace(query, null, 'glob');
             console.log(query);
+            // -----------------------------------
+            // fetch all services
+            // -----------------------------------
             if (query == "services.*") {
               return this.doRequest({
                 url: this.url + '/containers/all',
@@ -161,7 +169,7 @@ System.register(['lodash'], function (_export, _context) {
                 for (var i = 0; i < data.length; i++) {
                   var label;
                   if (data[i].name == undefined || data[i].name == null) {
-                    label = data[i].id;
+                    continue;
                   } else {
                     var svc_name = data[i].name.split('|');
                     label = svc_name[0];
@@ -171,10 +179,14 @@ System.register(['lodash'], function (_export, _context) {
                 return res;
               });
             }
+            // -----------------------------------
+            // fetch parameters for services
+            // -----------------------------------
             if (query.indexOf(".params.*") !== -1) {
               var svc_name = query.split('.')[0];
+              console.log("++++++++++++ " + svc_name);
               return this.doRequest({
-                url: this.url + '/containers/name=' + svc_name + '|*?fields=parameters',
+                url: this.url + '/containers/name=' + svc_name + '*?fields=parameters',
                 method: 'GET'
               }).then(function (response) {
                 var res = [];
@@ -189,12 +201,14 @@ System.register(['lodash'], function (_export, _context) {
                 return res;
               });
             }
-
+            // -----------------------------------
+            // for unknown metric query
+            // -----------------------------------
             return this.doRequest({
               url: this.url + '/containers/all',
               method: 'GET'
             }).then(function (metrics) {
-              return { status: "success", message: "Only `containers` and `parameters` queries are supported", title: "Choose query" };
+              return { status: "success", message: "Only `services` and `params` queries are supported", title: "Choose query" };
             });
           }
         }, {
@@ -221,10 +235,10 @@ System.register(['lodash'], function (_export, _context) {
 
             var targets = _.map(options.targets, function (target) {
               return {
-                target: typeof target.target == "string" ? _this.templateSrv.replace(target.target, options.scopedVars, 'regex') : target.target,
+                target: _this.templateSrv.replace(target.target, options.scopedVars, 'regex'),
                 refId: target.refId,
                 hide: target.hide,
-                parameter: _this.templateSrv.replace(target.parameter)
+                parameter: _this.templateSrv.replace(target.parameter, options.scopedVars, 'glob')
               };
             });
 

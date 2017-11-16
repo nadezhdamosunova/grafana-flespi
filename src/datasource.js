@@ -17,6 +17,9 @@ export class FlespiDatasource {
     this.templateSrv = templateSrv;
   }
 
+// -----------------------------------
+// query metrics values and convert into timeseries
+// -----------------------------------
   query(options) {
     console.log("before: " + JSON.stringify(options))
     var query = this.buildQueryParameters(options);
@@ -28,7 +31,7 @@ export class FlespiDatasource {
       return this.q.when({data: []});
     }
     // prepare params for request
-    var container_id = query.targets[0].target;
+    var svc_name = query.targets[0].target;
     var parameters = query.targets[0].parameter.replace(/[{})]/g, '');
     var from = parseInt(Date.parse(query.range.from) / 1000);
     var to = parseInt(Date.parse(query.range.to) / 1000);
@@ -40,7 +43,7 @@ export class FlespiDatasource {
     }
 
     return this.doRequest({
-      url: this.url + '/containers/' + container_id + '/messages?data=' + JSON.stringify(request_params),
+      url: this.url + '/containers/name=' + svc_name + '|*/messages?data=' + JSON.stringify(request_params),
       method: 'GET'
     }).then(response => {
         var data = [];
@@ -71,17 +74,19 @@ export class FlespiDatasource {
         return {data: data};
       });
   }
-
-  testDatasource() {
-    return this.doRequest({
-      url: this.url + '/containers/all',
-      method: 'GET',
-    }).then(response => {
-      if (response.status === 200) {
-        return { status: "success", message: "Data source is working", title: "Success" };
-      }
-    });
-  }
+// -----------------------------------
+// check connection to datasource
+// -----------------------------------
+    testDatasource() {
+        return this.doRequest({
+            url: this.url + '/containers/all',
+            method: 'GET',
+        }).then(response => {
+            if (response.status === 200) {
+                return { status: "success", message: "Data source is working", title: "Success" };
+            }
+        });
+    }
 
   annotationQuery(options) {
     var query = this.templateSrv.replace(options.annotation.query, {}, 'glob');
@@ -106,53 +111,65 @@ export class FlespiDatasource {
     });
   }
 
-  metricFindQuery(query) {
-  query = this.templateSrv.replace(query, null, 'regex')
-  console.log(query)
+// -----------------------------------
+// query possible metrics for the datasource
+// -----------------------------------
+metricFindQuery(query) {
+    query = this.templateSrv.replace(query, null, 'glob')
+    console.log(query)
+// -----------------------------------
+// fetch all services
+// -----------------------------------
     if (query == "services.*") {
-      return this.doRequest({
-        url: this.url + '/containers/all',
-        method: 'GET',
-      }).then(response => {
-        const res = [];
-        const data = response.data.result;
-        for (var i = 0; i < data.length; i++) {
-          var label;
-          if (data[i].name == undefined || data[i].name == null) {
-            label = data[i].id
-          } else {
-            var svc_name = data[i].name.split('|')
-            label = svc_name[0];
-          }
-          res.push({value: label, text: label})
-        }
-        return res;
-      });
-    }
-    if (query.indexOf(".params.*") !== -1) {
-      var svc_name = query.split('.')[0]
-      return this.doRequest({
-        url: this.url + '/containers/name=' + svc_name + '|*?fields=parameters',
-        method: 'GET',
-      }).then(response => {
-        const res = [];
-        const data = response.data.result;
-
-        for (let i = 0; i < data.length; i++) {
-          var parameters = data[i].parameters;
-            for (let j = 0; j < parameters.length; j++) {
-              res.push({value: parameters[j], text: parameters[j]});
+        return this.doRequest({
+            url: this.url + '/containers/all',
+            method: 'GET',
+        }).then(response => {
+            const res = [];
+            const data = response.data.result;
+            for (var i = 0; i < data.length; i++) {
+                var label;
+                if (data[i].name == undefined || data[i].name == null) {
+                    continue
+                } else {
+                    var svc_name = data[i].name.split('|')
+                    label = svc_name[0];
+                }
+                res.push({value: label, text: label})
             }
-        }
-        return res;
-      });
+            return res;
+        });
     }
+// -----------------------------------
+// fetch parameters for services
+// -----------------------------------
+    if (query.indexOf(".params.*") !== -1) {
+        var svc_name = query.split('.')[0]
+        console.log("++++++++++++ " + svc_name)
+        return this.doRequest({
+            url: this.url + '/containers/name=' + svc_name + '*?fields=parameters',
+            method: 'GET',
+        }).then(response => {
+            const res = [];
+            const data = response.data.result;
 
+            for (let i = 0; i < data.length; i++) {
+                var parameters = data[i].parameters;
+                for (let j = 0; j < parameters.length; j++) {
+                    res.push({value: parameters[j], text: parameters[j]});
+                }
+            }
+            return res;
+        });
+    }
+// -----------------------------------
+// for unknown metric query
+// -----------------------------------
     return this.doRequest({
            url: this.url + '/containers/all',
            method: 'GET',
     }).then(metrics => {
-        return { status: "success", message: "Only `containers` and `parameters` queries are supported", title: "Choose query" };
+        return { status: "success", message: "Only `services` and `params` queries are supported", title: "Choose query" };
     });
   }
 
@@ -175,10 +192,10 @@ export class FlespiDatasource {
 
     var targets = _.map(options.targets, target => {
       return {
-        target: typeof target.target == "string" ? this.templateSrv.replace(target.target, options.scopedVars, 'regex') : target.target,
+        target: this.templateSrv.replace(target.target, options.scopedVars, 'regex'),
         refId: target.refId,
         hide: target.hide,
-        parameter: this.templateSrv.replace(target.parameter)
+        parameter: this.templateSrv.replace(target.parameter, options.scopedVars, 'glob')
       };
     });
 
